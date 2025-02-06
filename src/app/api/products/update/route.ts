@@ -1,40 +1,34 @@
-// pages/api/products/update.ts
+import { NextResponse } from "next/server";
 
-import { NextApiRequest, NextApiResponse } from 'next';
-import { client } from '@/sanity/lib/client';
+// Sanity client (use your own configuration here)
+import { createClient } from "@sanity/client";
 
-const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  if (req.method === 'POST') {
-    try {
-      const productData = req.body; // Extract product data from the request body
+const client = createClient({
+  projectId: "your-project-id", // Replace with your Sanity project ID
+  dataset: "your-dataset-name", // Replace with your dataset name (e.g., 'production')
+  useCdn: false, // Set to 'false' to ensure you are getting the latest data
+});
 
-      const { name, details, price, priceWithoutDiscount, category, image } = productData;
+// Function to handle the POST request to add a product
+export async function POST(req: Request) {
+  try {
+    // Parse the request body
+    const { name, details, price, priceWithoutDiscount, category, image } = await req.json();
 
-      // Create a new product document in Sanity
-      const product = await client.create({
-        _type: 'product',
-        name,
-        details,
-        price,
-        priceWithoutDiscount,
-        category,
-        image: {
-          _type: 'image',
-          asset: {
-            _type: 'reference',
-            _ref: image, // The reference to the uploaded image
-          },
-        },
-      });
+    // Create a new product in Sanity
+    const result = await client.create({
+      _type: "product", // Make sure this matches the schema in Sanity
+      name,
+      details,
+      price,
+      priceWithoutDiscount,
+      category,
+      image, // This should be the image URL or reference you got from the image upload
+    });
 
-      res.status(200).json({ message: 'Product added successfully', product });
-    } catch (error) {
-      console.error('Error adding product:', error);
-      res.status(500).json({ message: 'Failed to add product' });
-    }
-  } else {
-    res.status(405).json({ message: 'Method Not Allowed' });
+    return NextResponse.json(result, { status: 200 });
+  } catch (error) {
+    console.error("Error creating product:", error);
+    return NextResponse.json({ message: "Error creating product." }, { status: 500 });
   }
-};
-
-export default handler;
+}
